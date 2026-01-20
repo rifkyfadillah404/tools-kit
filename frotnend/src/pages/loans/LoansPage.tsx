@@ -1,0 +1,280 @@
+import React, { useEffect, useState } from 'react';
+import { Eye, RotateCcw, Package } from 'lucide-react';
+import { Button, Modal, Textarea } from '../../components/ui';
+import { peminjamanApi } from '../../api';
+import { useUIStore } from '../../store/uiStore';
+
+interface PeminjamanRow {
+  id: number;
+  peminjam_name: string;
+  tool_name: string;
+  asset_tag: string;
+  qty: number;
+  status: string;
+  tanggal_pinjam: string;
+  tanggal_kembali_rencana: string;
+  tanggal_kembali_aktual: string | null;
+  kondisi_keluar: string | null;
+  kondisi_masuk: string | null;
+  denda: string;
+}
+
+export const LoansPage: React.FC = () => {
+  const { addToast } = useUIStore();
+
+  const [rows, setRows] = useState<PeminjamanRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<'dipinjam' | 'dikembalikan' | ''>('dipinjam');
+
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+
+  const [selected, setSelected] = useState<PeminjamanRow | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const [returnCondition, setReturnCondition] = useState('Baik');
+  const [returnNote, setReturnNote] = useState('');
+
+  useEffect(() => {
+    void fetchRows();
+  }, [filterStatus]);
+
+  const fetchRows = async () => {
+    setLoading(true);
+    try {
+      const { data } = await peminjamanApi.getAll({
+        status: filterStatus || undefined,
+        limit: 100,
+      });
+      setRows(data.data);
+    } catch {
+      addToast('Gagal memuat data peminjaman', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openDetail = async (row: PeminjamanRow) => {
+    try {
+      const { data } = await peminjamanApi.getById(row.id);
+      setSelected(data);
+      setDetailModalOpen(true);
+    } catch {
+      addToast('Gagal memuat detail', 'error');
+    }
+  };
+
+  const openReturn = (row: PeminjamanRow) => {
+    setSelected(row);
+    setReturnCondition('Baik');
+    setReturnNote('');
+    setReturnModalOpen(true);
+  };
+
+  const handleReturn = async () => {
+    if (!selected) return;
+    setSaving(true);
+    try {
+      const { data } = await peminjamanApi.return(selected.id, returnCondition, returnNote || undefined);
+      addToast(`Pengembalian berhasil. Denda: Rp ${Number(data.denda || 0).toLocaleString('id-ID')}`, 'success');
+      setReturnModalOpen(false);
+      setDetailModalOpen(false);
+      void fetchRows();
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Pengembalian gagal', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const statusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      dipinjam: 'Dipinjam',
+      dikembalikan: 'Dikembalikan',
+      approved: 'Disetujui',
+      pending: 'Menunggu',
+      rejected: 'Ditolak',
+    };
+    return labels[status] || status;
+  };
+
+  const formatDate = (date: string) => new Date(date).toLocaleDateString('id-ID');
+
+  return (
+    <div className="animate-[fadeIn_300ms_ease-out]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-ink-900 dark:text-white">Proses Pengembalian</h1>
+          <p className="text-ink-500 dark:text-ink-400 mt-1">Kelola pengembalian dan denda keterlambatan</p>
+        </div>
+      </div>
+
+      {/* Filter */}
+      <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 p-4 mb-6">
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as any)}
+          className="px-3 py-2 text-sm border border-ink-200 dark:border-ink-600 rounded-md bg-white dark:bg-ink-800 text-ink-900 dark:text-ink-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
+        >
+          <option value="">Semua</option>
+          <option value="dipinjam">Dipinjam</option>
+          <option value="dikembalikan">Dikembalikan</option>
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="w-8 h-8 border-4 border-ink-200 dark:border-ink-600 border-t-blue-600 rounded-full animate-spin" />
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-ink-500 dark:text-ink-400">
+            <Package size={48} className="mb-4 opacity-50" />
+            <p>Tidak ada data</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-ink-50 dark:bg-ink-800 border-b border-ink-200 dark:border-ink-700">
+                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">ID</th>
+                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Peminjam</th>
+                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Alat</th>
+                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Qty</th>
+                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Jatuh Tempo</th>
+                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Status</th>
+                  <th className="text-right px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-ink-100 dark:divide-ink-700">
+                {rows.map((row) => (
+                  <tr key={row.id} className="hover:bg-ink-50 dark:hover:bg-ink-800 transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs text-ink-600 dark:text-ink-400">#{row.id}</td>
+                    <td className="px-4 py-3 font-medium text-ink-900 dark:text-white">{row.peminjam_name}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-ink-900 dark:text-white">{row.tool_name}</p>
+                      <p className="text-xs text-ink-500 dark:text-ink-400 font-mono">{row.asset_tag}</p>
+                    </td>
+                    <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{row.qty}</td>
+                    <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{formatDate(row.tanggal_kembali_rencana)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`status-badge status-${row.status}`}>{statusLabel(row.status)}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => void openDetail(row)}
+                          className="p-1.5 text-ink-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {row.status === 'dipinjam' && (
+                          <button
+                            onClick={() => openReturn(row)}
+                            className="p-1.5 text-ink-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"
+                          >
+                            <RotateCcw size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Detail Modal */}
+      <Modal
+        isOpen={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        title={`Peminjaman #${selected?.id ?? ''}`}
+        size="md"
+      >
+        {selected && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-ink-500 dark:text-ink-400">Peminjam</p>
+                <p className="font-medium text-ink-900 dark:text-white">{selected.peminjam_name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-ink-500 dark:text-ink-400">Status</p>
+                <span className={`status-badge status-${selected.status}`}>{statusLabel(selected.status)}</span>
+              </div>
+              <div>
+                <p className="text-xs text-ink-500 dark:text-ink-400">Pinjam</p>
+                <p className="font-medium text-ink-900 dark:text-white">{formatDate(selected.tanggal_pinjam)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-ink-500 dark:text-ink-400">Rencana Kembali</p>
+                <p className="font-medium text-ink-900 dark:text-white">{formatDate(selected.tanggal_kembali_rencana)}</p>
+              </div>
+            </div>
+
+            {selected.tanggal_kembali_aktual ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-ink-500 dark:text-ink-400">Kembali</p>
+                  <p className="font-medium text-ink-900 dark:text-white">{formatDate(selected.tanggal_kembali_aktual)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-ink-500 dark:text-ink-400">Denda</p>
+                  <p className="font-medium text-ink-900 dark:text-white">Rp {Number(selected.denda || 0).toLocaleString('id-ID')}</p>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </Modal>
+
+      {/* Return Modal */}
+      <Modal
+        isOpen={returnModalOpen}
+        onClose={() => setReturnModalOpen(false)}
+        title="Konfirmasi Pengembalian"
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setReturnModalOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={handleReturn} loading={saving}>
+              Proses
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-ink-600 dark:text-ink-300">
+            Pengembalian peminjaman <span className="font-mono">#{selected?.id}</span>
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-ink-700 dark:text-ink-300 mb-1">Kondisi</label>
+            <select
+              value={returnCondition}
+              onChange={(e) => setReturnCondition(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-ink-200 dark:border-ink-600 rounded-md bg-white dark:bg-ink-800 text-ink-900 dark:text-ink-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
+            >
+              <option value="Baik">Baik</option>
+              <option value="Cukup">Cukup</option>
+              <option value="Rusak Ringan">Rusak Ringan</option>
+              <option value="Rusak">Rusak</option>
+              <option value="Hilang">Hilang</option>
+            </select>
+          </div>
+          <Textarea
+            label="Keterangan"
+            value={returnNote}
+            onChange={(e) => setReturnNote(e.target.value)}
+            placeholder="Catatan pengembalian (opsional)"
+            rows={3}
+          />
+        </div>
+      </Modal>
+    </div>
+  );
+};

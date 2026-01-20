@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run db:migrate)",
+      "Bash(npm run db:seed)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(./node_modules/.bin/tailwindcss init:*)",
+      "Bash(npm run build)",
+      "Bash(pdftotext:*)",
+      "Bash(node:*)",
+      "Bash(npm test)",
+      "Bash(curl:*)",
+      "Bash(where:*)",
+      "Skill(frontend-skill)"
+    ]
+  }
+}
