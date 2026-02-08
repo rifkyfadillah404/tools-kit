@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MainLayout } from './components/layout';
@@ -7,6 +8,7 @@ import { ToolsPage, CategoriesPage } from './pages/tools';
 import { LoanRequestsPage, LoansPage } from './pages/loans';
 import { ReportsPage } from './pages/reports';
 import { useAuthStore } from './store/authStore';
+import { useUIStore } from './store/uiStore';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +30,12 @@ function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?
 }
 
 function App() {
+  const { initializeTheme } = useUIStore();
+
+  useEffect(() => {
+    initializeTheme();
+  }, [initializeTheme]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>

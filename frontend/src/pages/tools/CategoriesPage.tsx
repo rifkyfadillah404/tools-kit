@@ -88,8 +88,8 @@ export const CategoriesPage: React.FC = () => {
     <div className="animate-[fadeIn_300ms_ease-out]">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-ink-900 dark:text-white">Kategori</h1>
-          <p className="text-ink-500 dark:text-ink-400 mt-1">Kelola kategori untuk mengelompokkan alat</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kategori</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Kelola kategori untuk mengelompokkan alat</p>
         </div>
         <Button onClick={() => openModal()} icon={<Plus size={16} />}>
           Tambah Kategori
@@ -105,7 +105,7 @@ export const CategoriesPage: React.FC = () => {
           {categories.map((category) => (
             <div
               key={category.id}
-              className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 p-5 hover:border-ink-200 dark:hover:border-ink-600 transition-colors"
+              className="bg-white dark:bg-gray-900 rounded-lg border border-ink-100 dark:border-ink-700 p-5 hover:border-ink-200 dark:hover:border-ink-600 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -113,27 +113,27 @@ export const CategoriesPage: React.FC = () => {
                     <FolderOpen size={20} className="text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-ink-900 dark:text-white">{category.name}</h3>
-                    <p className="text-sm text-ink-500 dark:text-ink-400">{category.tool_count} alat</p>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{category.name}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{category.tool_count} alat</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openModal(category)}
-                    className="p-1.5 text-ink-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                   >
                     <Edit2 size={16} />
                   </button>
                   <button
                     onClick={() => handleDelete(category)}
-                    className="p-1.5 text-ink-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                   >
                     <Trash2 size={16} />
                   </button>
                 </div>
               </div>
               {category.description && (
-                <p className="mt-3 text-sm text-ink-600 dark:text-ink-400 line-clamp-2">{category.description}</p>
+                <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{category.description}</p>
               )}
             </div>
           ))}

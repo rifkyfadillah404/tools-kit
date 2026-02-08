@@ -2,18 +2,15 @@ const mysql = require('mysql2/promise');
 const config = require('./index');
 
 const migrations = `
--- Drop existing tables if needed for fresh start
-DROP TABLE IF EXISTS audit_logs;
-DROP TABLE IF EXISTS loan_items;
-DROP TABLE IF EXISTS loans;
-DROP TABLE IF EXISTS approvals;
-DROP TABLE IF EXISTS loan_request_items;
-DROP TABLE IF EXISTS loan_requests;
+DROP TABLE IF EXISTS peminjaman_units;
+DROP TABLE IF EXISTS tool_units;
+DROP TABLE IF EXISTS pengembalian;
+DROP TABLE IF EXISTS log_aktivitas;
+DROP TABLE IF EXISTS peminjaman;
 DROP TABLE IF EXISTS tools;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS users;
 
--- Users table dengan 3 role: admin, petugas, peminjam
 CREATE TABLE users (
   id INT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,
@@ -24,7 +21,6 @@ CREATE TABLE users (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Categories table
 CREATE TABLE categories (
   id INT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,
@@ -34,7 +30,6 @@ CREATE TABLE categories (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Tools table
 CREATE TABLE tools (
   id INT PRIMARY KEY AUTO_INCREMENT,
   category_id INT,
@@ -51,7 +46,17 @@ CREATE TABLE tools (
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
--- Peminjaman table (loan requests + loans combined)
+CREATE TABLE tool_units (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  tool_id INT NOT NULL,
+  unit_code VARCHAR(100) NOT NULL UNIQUE,
+  status ENUM('available', 'dipinjam', 'maintenance', 'hilang') NOT NULL DEFAULT 'available',
+  condition_note TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (tool_id) REFERENCES tools(id) ON DELETE CASCADE
+);
+
 CREATE TABLE peminjaman (
   id INT PRIMARY KEY AUTO_INCREMENT,
   peminjam_id INT NOT NULL,
@@ -80,7 +85,25 @@ CREATE TABLE peminjaman (
   FOREIGN KEY (return_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Pengembalian table (untuk tracking detail pengembalian)
+CREATE TABLE peminjaman_units (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  peminjaman_id INT NOT NULL,
+  tool_unit_id INT NOT NULL,
+  checkout_by INT NULL,
+  checkout_at TIMESTAMP NULL,
+  return_by INT NULL,
+  return_at TIMESTAMP NULL,
+  kondisi_keluar TEXT,
+  kondisi_masuk TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_peminjaman_units (peminjaman_id, tool_unit_id),
+  FOREIGN KEY (peminjaman_id) REFERENCES peminjaman(id) ON DELETE CASCADE,
+  FOREIGN KEY (tool_unit_id) REFERENCES tool_units(id) ON DELETE RESTRICT,
+  FOREIGN KEY (checkout_by) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (return_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
 CREATE TABLE pengembalian (
   id INT PRIMARY KEY AUTO_INCREMENT,
   peminjaman_id INT NOT NULL,
@@ -94,7 +117,6 @@ CREATE TABLE pengembalian (
   FOREIGN KEY (petugas_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Log aktivitas table
 CREATE TABLE log_aktivitas (
   id INT PRIMARY KEY AUTO_INCREMENT,
   user_id INT,
@@ -107,17 +129,38 @@ CREATE TABLE log_aktivitas (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Indexes
 CREATE INDEX idx_tools_status ON tools(status);
 CREATE INDEX idx_tools_category ON tools(category_id);
+CREATE INDEX idx_tool_units_tool_id ON tool_units(tool_id);
+CREATE INDEX idx_tool_units_status ON tool_units(status);
+CREATE INDEX idx_tool_units_code ON tool_units(unit_code);
 CREATE INDEX idx_peminjaman_status ON peminjaman(status);
 CREATE INDEX idx_peminjaman_peminjam ON peminjaman(peminjam_id);
+CREATE INDEX idx_peminjaman_units_peminjaman ON peminjaman_units(peminjaman_id);
+CREATE INDEX idx_peminjaman_units_tool_unit ON peminjaman_units(tool_unit_id);
 CREATE INDEX idx_log_aktivitas_user ON log_aktivitas(user_id);
 CREATE INDEX idx_log_aktivitas_action ON log_aktivitas(action);
 `;
 
 const storedProcedures = `
--- Stored Procedure: Proses Peminjaman
+DROP PROCEDURE IF EXISTS sp_sync_tool_stock;
+CREATE PROCEDURE sp_sync_tool_stock(IN p_tool_id INT)
+BEGIN
+  DECLARE v_total_units INT DEFAULT 0;
+  DECLARE v_available_units INT DEFAULT 0;
+
+  SELECT COUNT(*), COALESCE(SUM(status = 'available'), 0)
+  INTO v_total_units, v_available_units
+  FROM tool_units
+  WHERE tool_id = p_tool_id;
+
+  UPDATE tools
+  SET stock = v_total_units,
+      available_stock = v_available_units,
+      status = IF(v_available_units > 0, 'available', 'not_available')
+  WHERE id = p_tool_id;
+END;
+
 DROP PROCEDURE IF EXISTS sp_ajukan_peminjaman;
 CREATE PROCEDURE sp_ajukan_peminjaman(
   IN p_peminjam_id INT,
@@ -128,10 +171,12 @@ CREATE PROCEDURE sp_ajukan_peminjaman(
   IN p_catatan TEXT
 )
 BEGIN
-  DECLARE v_available INT;
+  DECLARE v_available INT DEFAULT 0;
 
-  -- Check available stock
-  SELECT available_stock INTO v_available FROM tools WHERE id = p_tool_id;
+  SELECT COALESCE(SUM(status = 'available'), 0)
+  INTO v_available
+  FROM tool_units
+  WHERE tool_id = p_tool_id;
 
   IF v_available >= p_qty THEN
     INSERT INTO peminjaman (peminjam_id, tool_id, qty, tanggal_pinjam, tanggal_kembali_rencana, catatan, status)
@@ -143,35 +188,28 @@ BEGIN
   END IF;
 END;
 
--- Stored Procedure: Approve Peminjaman
 DROP PROCEDURE IF EXISTS sp_approve_peminjaman;
 CREATE PROCEDURE sp_approve_peminjaman(
   IN p_peminjaman_id INT,
   IN p_petugas_id INT
 )
 BEGIN
-  DECLARE v_qty INT;
-  DECLARE v_tool_id INT;
   DECLARE v_status VARCHAR(20);
 
-  SELECT qty, tool_id, status INTO v_qty, v_tool_id, v_status
+  SELECT status INTO v_status
   FROM peminjaman WHERE id = p_peminjaman_id;
 
   IF v_status = 'pending' THEN
-    START TRANSACTION;
-
     UPDATE peminjaman
     SET status = 'approved', approved_by = p_petugas_id, approved_at = NOW()
     WHERE id = p_peminjaman_id;
 
-    COMMIT;
     SELECT 'success' as status, 'Peminjaman disetujui' as message;
   ELSE
     SELECT 'error' as status, 'Status peminjaman tidak valid' as message;
   END IF;
 END;
 
--- Stored Procedure: Checkout (serahkan alat)
 DROP PROCEDURE IF EXISTS sp_checkout_peminjaman;
 CREATE PROCEDURE sp_checkout_peminjaman(
   IN p_peminjaman_id INT,
@@ -182,33 +220,72 @@ BEGIN
   DECLARE v_qty INT;
   DECLARE v_tool_id INT;
   DECLARE v_status VARCHAR(20);
-  DECLARE v_available INT;
+  DECLARE v_selected INT DEFAULT 0;
 
   SELECT qty, tool_id, status INTO v_qty, v_tool_id, v_status
-  FROM peminjaman WHERE id = p_peminjaman_id;
+  FROM peminjaman WHERE id = p_peminjaman_id
+  FOR UPDATE;
 
-  SELECT available_stock INTO v_available FROM tools WHERE id = v_tool_id;
-
-  IF v_status = 'approved' AND v_available >= v_qty THEN
+  IF v_status = 'approved' THEN
     START TRANSACTION;
 
-    UPDATE peminjaman
-    SET status = 'dipinjam', checkout_by = p_petugas_id, checkout_at = NOW(), kondisi_keluar = p_kondisi
-    WHERE id = p_peminjaman_id;
+    DROP TEMPORARY TABLE IF EXISTS tmp_selected_units;
+    CREATE TEMPORARY TABLE tmp_selected_units (id INT PRIMARY KEY) ENGINE=MEMORY;
 
-    UPDATE tools SET available_stock = available_stock - v_qty WHERE id = v_tool_id;
+    INSERT INTO tmp_selected_units (id)
+    SELECT id
+    FROM tool_units
+    WHERE tool_id = v_tool_id
+      AND status = 'available'
+    ORDER BY id
+    LIMIT v_qty
+    FOR UPDATE;
 
-    -- Update status if no stock left
-    UPDATE tools SET status = 'not_available' WHERE id = v_tool_id AND available_stock <= 0;
+    SELECT COUNT(*) INTO v_selected FROM tmp_selected_units;
 
-    COMMIT;
-    SELECT 'success' as status, 'Alat berhasil diserahkan' as message;
+    IF v_selected < v_qty THEN
+      ROLLBACK;
+      DROP TEMPORARY TABLE IF EXISTS tmp_selected_units;
+      SELECT 'error' as status, 'Stok tidak mencukupi atau status tidak valid' as message;
+    ELSE
+      UPDATE peminjaman
+      SET status = 'dipinjam',
+          checkout_by = p_petugas_id,
+          checkout_at = NOW(),
+          kondisi_keluar = p_kondisi
+      WHERE id = p_peminjaman_id;
+
+      UPDATE tool_units tu
+      JOIN tmp_selected_units ts ON ts.id = tu.id
+      SET tu.status = 'dipinjam',
+          tu.condition_note = p_kondisi,
+          tu.updated_at = NOW();
+
+      INSERT INTO peminjaman_units (peminjaman_id, tool_unit_id, checkout_by, checkout_at, kondisi_keluar)
+      SELECT p_peminjaman_id, ts.id, p_petugas_id, NOW(), p_kondisi
+      FROM tmp_selected_units ts;
+
+      CALL sp_sync_tool_stock(v_tool_id);
+
+      COMMIT;
+      DROP TEMPORARY TABLE IF EXISTS tmp_selected_units;
+
+      SELECT
+        'success' as status,
+        'Alat berhasil diserahkan' as message,
+        COALESCE(
+          (SELECT GROUP_CONCAT(tu.unit_code ORDER BY tu.unit_code SEPARATOR ', ')
+           FROM peminjaman_units pu
+           JOIN tool_units tu ON tu.id = pu.tool_unit_id
+           WHERE pu.peminjaman_id = p_peminjaman_id),
+          ''
+        ) as unit_codes;
+    END IF;
   ELSE
     SELECT 'error' as status, 'Stok tidak mencukupi atau status tidak valid' as message;
   END IF;
 END;
 
--- Stored Procedure: Pengembalian dengan Denda
 DROP PROCEDURE IF EXISTS sp_kembalikan_alat;
 CREATE PROCEDURE sp_kembalikan_alat(
   IN p_peminjaman_id INT,
@@ -217,29 +294,36 @@ CREATE PROCEDURE sp_kembalikan_alat(
   IN p_keterangan TEXT
 )
 BEGIN
-  DECLARE v_qty INT;
   DECLARE v_tool_id INT;
   DECLARE v_status VARCHAR(20);
   DECLARE v_tanggal_rencana DATE;
   DECLARE v_hari_telat INT;
   DECLARE v_denda DECIMAL(10,2);
   DECLARE v_denda_per_hari DECIMAL(10,2) DEFAULT 5000;
+  DECLARE v_unit_status VARCHAR(20);
 
-  SELECT qty, tool_id, status, tanggal_kembali_rencana
-  INTO v_qty, v_tool_id, v_status, v_tanggal_rencana
-  FROM peminjaman WHERE id = p_peminjaman_id;
+  SELECT tool_id, status, tanggal_kembali_rencana
+  INTO v_tool_id, v_status, v_tanggal_rencana
+  FROM peminjaman
+  WHERE id = p_peminjaman_id
+  FOR UPDATE;
 
   IF v_status = 'dipinjam' THEN
-    -- Hitung hari telat
     SET v_hari_telat = DATEDIFF(CURDATE(), v_tanggal_rencana);
     IF v_hari_telat < 0 THEN SET v_hari_telat = 0; END IF;
 
-    -- Hitung denda
     SET v_denda = v_hari_telat * v_denda_per_hari;
+
+    IF LOWER(IFNULL(p_kondisi, '')) LIKE '%hilang%' THEN
+      SET v_unit_status = 'hilang';
+    ELSEIF LOWER(IFNULL(p_kondisi, '')) LIKE '%rusak%' THEN
+      SET v_unit_status = 'maintenance';
+    ELSE
+      SET v_unit_status = 'available';
+    END IF;
 
     START TRANSACTION;
 
-    -- Update peminjaman
     UPDATE peminjaman
     SET status = 'dikembalikan',
         return_by = p_petugas_id,
@@ -249,25 +333,49 @@ BEGIN
         denda = v_denda
     WHERE id = p_peminjaman_id;
 
-    -- Insert pengembalian record
     INSERT INTO pengembalian (peminjaman_id, tanggal_kembali, kondisi, denda, keterangan, petugas_id)
     VALUES (p_peminjaman_id, CURDATE(), p_kondisi, v_denda, p_keterangan, p_petugas_id);
 
-    -- Update tool stock
-    UPDATE tools SET available_stock = available_stock + v_qty WHERE id = v_tool_id;
-    UPDATE tools SET status = 'available' WHERE id = v_tool_id AND available_stock > 0;
+    UPDATE peminjaman_units
+    SET return_by = p_petugas_id,
+        return_at = NOW(),
+        kondisi_masuk = p_kondisi,
+        updated_at = NOW()
+    WHERE peminjaman_id = p_peminjaman_id
+      AND return_at IS NULL;
+
+    UPDATE tool_units tu
+    JOIN peminjaman_units pu ON pu.tool_unit_id = tu.id
+    SET tu.status = v_unit_status,
+        tu.condition_note = p_kondisi,
+        tu.updated_at = NOW()
+    WHERE pu.peminjaman_id = p_peminjaman_id
+      AND pu.return_at IS NOT NULL;
+
+    CALL sp_sync_tool_stock(v_tool_id);
 
     COMMIT;
-    SELECT 'success' as status, 'Alat berhasil dikembalikan' as message, v_denda as denda, v_hari_telat as hari_telat;
+
+    SELECT
+      'success' as status,
+      'Alat berhasil dikembalikan' as message,
+      v_denda as denda,
+      v_hari_telat as hari_telat,
+      COALESCE(
+        (SELECT GROUP_CONCAT(tu.unit_code ORDER BY tu.unit_code SEPARATOR ', ')
+         FROM peminjaman_units pu
+         JOIN tool_units tu ON tu.id = pu.tool_unit_id
+         WHERE pu.peminjaman_id = p_peminjaman_id),
+        ''
+      ) as unit_codes;
   ELSE
     ROLLBACK;
-    SELECT 'error' as status, 'Status peminjaman tidak valid' as message, 0 as denda, 0 as hari_telat;
+    SELECT 'error' as status, 'Status peminjaman tidak valid' as message, 0 as denda, 0 as hari_telat, '' as unit_codes;
   END IF;
 END;
 `;
 
 const functions = `
--- Function: Hitung Denda
 DROP FUNCTION IF EXISTS fn_hitung_denda;
 CREATE FUNCTION fn_hitung_denda(p_peminjaman_id INT)
 RETURNS DECIMAL(10,2)
@@ -289,7 +397,6 @@ BEGIN
   RETURN v_denda;
 END;
 
--- Function: Cek Ketersediaan Alat
 DROP FUNCTION IF EXISTS fn_cek_ketersediaan;
 CREATE FUNCTION fn_cek_ketersediaan(p_tool_id INT, p_qty INT)
 RETURNS BOOLEAN
@@ -297,14 +404,16 @@ DETERMINISTIC
 BEGIN
   DECLARE v_available INT;
 
-  SELECT available_stock INTO v_available FROM tools WHERE id = p_tool_id;
+  SELECT COALESCE(SUM(status = 'available'), 0)
+  INTO v_available
+  FROM tool_units
+  WHERE tool_id = p_tool_id;
 
   RETURN v_available >= p_qty;
 END;
 `;
 
 const triggers = `
--- Trigger: Log aktivitas setelah insert peminjaman
 DROP TRIGGER IF EXISTS trg_after_peminjaman_insert;
 CREATE TRIGGER trg_after_peminjaman_insert
 AFTER INSERT ON peminjaman
@@ -315,7 +424,6 @@ BEGIN
           CONCAT('Pengajuan peminjaman alat ID: ', NEW.tool_id));
 END;
 
--- Trigger: Log aktivitas setelah update status peminjaman
 DROP TRIGGER IF EXISTS trg_after_peminjaman_update;
 CREATE TRIGGER trg_after_peminjaman_update
 AFTER UPDATE ON peminjaman
@@ -333,7 +441,6 @@ BEGIN
   END IF;
 END;
 
--- Trigger: Log aktivitas setelah pengembalian
 DROP TRIGGER IF EXISTS trg_after_pengembalian_insert;
 CREATE TRIGGER trg_after_pengembalian_insert
 AFTER INSERT ON pengembalian
@@ -344,7 +451,6 @@ BEGIN
           CONCAT('Pengembalian peminjaman ID: ', NEW.peminjaman_id, ', Denda: Rp ', NEW.denda));
 END;
 
--- Trigger: Log aktivitas setelah insert/update/delete tools
 DROP TRIGGER IF EXISTS trg_after_tool_insert;
 CREATE TRIGGER trg_after_tool_insert
 AFTER INSERT ON tools
@@ -375,53 +481,21 @@ async function migrate() {
       multipleStatements: true,
     });
 
-    // Create database
-    await connection.query('CREATE DATABASE IF NOT EXISTS ' + config.db.database + ' CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
-    console.log('Database "' + config.db.database + '" ready.');
+    await connection.query(`CREATE DATABASE IF NOT EXISTS ${config.db.database} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+    console.log(`Database "${config.db.database}" ready.`);
 
-    await connection.query('USE ' + config.db.database);
+    await connection.query(`USE ${config.db.database}`);
 
-    // Run migrations
     await connection.query(migrations);
     console.log('Tables created.');
 
-    // Create stored procedures
-    const procedures = storedProcedures.split('DROP PROCEDURE').filter(p => p.trim());
-    for (const proc of procedures) {
-      if (proc.trim()) {
-        try {
-          await connection.query('DROP PROCEDURE' + proc);
-        } catch (e) {
-          // Ignore errors
-        }
-      }
-    }
+    await connection.query(storedProcedures);
     console.log('Stored procedures created.');
 
-    // Create functions
-    const funcs = functions.split('DROP FUNCTION').filter(f => f.trim());
-    for (const func of funcs) {
-      if (func.trim()) {
-        try {
-          await connection.query('DROP FUNCTION' + func);
-        } catch (e) {
-          // Ignore errors
-        }
-      }
-    }
+    await connection.query(functions);
     console.log('Functions created.');
 
-    // Create triggers
-    const trigs = triggers.split('DROP TRIGGER').filter(t => t.trim());
-    for (const trig of trigs) {
-      if (trig.trim()) {
-        try {
-          await connection.query('DROP TRIGGER' + trig);
-        } catch (e) {
-          // Ignore errors
-        }
-      }
-    }
+    await connection.query(triggers);
     console.log('Triggers created.');
 
     console.log('Migration completed successfully.');

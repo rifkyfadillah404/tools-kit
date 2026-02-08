@@ -7,6 +7,7 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "db:migrate": "node src/config/migrate.js",
+    "db:migrate:units": "node src/config/migrate_units_and_photos.js",
     "db:seed": "node src/config/seed.js"
   },
   "dependencies": {

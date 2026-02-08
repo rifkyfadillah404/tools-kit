@@ -17,6 +17,8 @@ interface PeminjamanRow {
   kondisi_keluar: string | null;
   kondisi_masuk: string | null;
   denda: string;
+  unit_codes?: string[];
+  unit_codes_active?: string[];
 }
 
 export const LoansPage: React.FC = () => {
@@ -76,7 +78,11 @@ export const LoansPage: React.FC = () => {
     setSaving(true);
     try {
       const { data } = await peminjamanApi.return(selected.id, returnCondition, returnNote || undefined);
-      addToast(`Pengembalian berhasil. Denda: Rp ${Number(data.denda || 0).toLocaleString('id-ID')}`, 'success');
+      const returnedUnits = Array.isArray(data?.unit_codes) ? data.unit_codes : [];
+      addToast(
+        `${returnedUnits.length > 0 ? `Unit ${returnedUnits.join(', ')} • ` : ''}Pengembalian berhasil. Denda: Rp ${Number(data.denda || 0).toLocaleString('id-ID')}`,
+        'success'
+      );
       setReturnModalOpen(false);
       setDetailModalOpen(false);
       void fetchRows();
@@ -104,17 +110,17 @@ export const LoansPage: React.FC = () => {
     <div className="animate-[fadeIn_300ms_ease-out]">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-ink-900 dark:text-white">Proses Pengembalian</h1>
-          <p className="text-ink-500 dark:text-ink-400 mt-1">Kelola pengembalian dan denda keterlambatan</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Proses Pengembalian</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Kelola pengembalian dan denda keterlambatan</p>
         </div>
       </div>
 
       {/* Filter */}
-      <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 p-4 mb-6">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700 p-4 mb-6">
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as any)}
-          className="px-3 py-2 text-sm border border-ink-200 dark:border-ink-600 rounded-md bg-white dark:bg-ink-800 text-ink-900 dark:text-ink-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
+          className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
         >
           <option value="">Semua</option>
           <option value="dipinjam">Dipinjam</option>
@@ -123,13 +129,13 @@ export const LoansPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="w-8 h-8 border-4 border-ink-200 dark:border-ink-600 border-t-blue-600 rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-gray-200 dark:border-gray-600 border-t-blue-600 rounded-full animate-spin" />
           </div>
         ) : rows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-ink-500 dark:text-ink-400">
+          <div className="flex flex-col items-center justify-center py-16 text-gray-500 dark:text-gray-400">
             <Package size={48} className="mb-4 opacity-50" />
             <p>Tidak ada data</p>
           </div>
@@ -137,27 +143,36 @@ export const LoansPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-ink-50 dark:bg-ink-800 border-b border-ink-200 dark:border-ink-700">
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">ID</th>
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Peminjam</th>
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Alat</th>
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Qty</th>
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Jatuh Tempo</th>
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Status</th>
-                  <th className="text-right px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Aksi</th>
+                <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">ID</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Peminjam</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Alat</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Qty</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Jatuh Tempo</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Status</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-ink-100 dark:divide-ink-700">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-ink-50 dark:hover:bg-ink-800 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-ink-600 dark:text-ink-400">#{row.id}</td>
-                    <td className="px-4 py-3 font-medium text-ink-900 dark:text-white">{row.peminjam_name}</td>
+                  <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">#{row.id}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.peminjam_name}</td>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-ink-900 dark:text-white">{row.tool_name}</p>
-                      <p className="text-xs text-ink-500 dark:text-ink-400 font-mono">{row.asset_tag}</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{row.tool_name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{row.asset_tag}</p>
                     </td>
-                    <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{row.qty}</td>
-                    <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{formatDate(row.tanggal_kembali_rencana)}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
+                      <div>
+                        <p>{row.qty}</p>
+                        {row.unit_codes && row.unit_codes.length > 0 && (
+                          <p className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                            {row.unit_codes.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{formatDate(row.tanggal_kembali_rencana)}</td>
                     <td className="px-4 py-3">
                       <span className={`status-badge status-${row.status}`}>{statusLabel(row.status)}</span>
                     </td>
@@ -165,14 +180,14 @@ export const LoansPage: React.FC = () => {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => void openDetail(row)}
-                          className="p-1.5 text-ink-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                         >
                           <Eye size={16} />
                         </button>
                         {row.status === 'dipinjam' && (
                           <button
                             onClick={() => openReturn(row)}
-                            className="p-1.5 text-ink-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"
+                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"
                           >
                             <RotateCcw size={16} />
                           </button>
@@ -198,32 +213,41 @@ export const LoansPage: React.FC = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Peminjam</p>
-                <p className="font-medium text-ink-900 dark:text-white">{selected.peminjam_name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Peminjam</p>
+                <p className="font-medium text-gray-900 dark:text-white">{selected.peminjam_name}</p>
               </div>
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Status</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Status</p>
                 <span className={`status-badge status-${selected.status}`}>{statusLabel(selected.status)}</span>
               </div>
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Pinjam</p>
-                <p className="font-medium text-ink-900 dark:text-white">{formatDate(selected.tanggal_pinjam)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Pinjam</p>
+                <p className="font-medium text-gray-900 dark:text-white">{formatDate(selected.tanggal_pinjam)}</p>
               </div>
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Rencana Kembali</p>
-                <p className="font-medium text-ink-900 dark:text-white">{formatDate(selected.tanggal_kembali_rencana)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Rencana Kembali</p>
+                <p className="font-medium text-gray-900 dark:text-white">{formatDate(selected.tanggal_kembali_rencana)}</p>
               </div>
+            </div>
+
+            <div className="border border-ink-200 dark:border-ink-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Unit transaksi</p>
+              {selected.unit_codes && selected.unit_codes.length > 0 ? (
+                <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400 mt-1">{selected.unit_codes.join(', ')}</p>
+              ) : (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Data unit belum tersedia.</p>
+              )}
             </div>
 
             {selected.tanggal_kembali_aktual ? (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-ink-500 dark:text-ink-400">Kembali</p>
-                  <p className="font-medium text-ink-900 dark:text-white">{formatDate(selected.tanggal_kembali_aktual)}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Kembali</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{formatDate(selected.tanggal_kembali_aktual)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-ink-500 dark:text-ink-400">Denda</p>
-                  <p className="font-medium text-ink-900 dark:text-white">Rp {Number(selected.denda || 0).toLocaleString('id-ID')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Denda</p>
+                  <p className="font-medium text-gray-900 dark:text-white">Rp {Number(selected.denda || 0).toLocaleString('id-ID')}</p>
                 </div>
               </div>
             ) : null}
@@ -249,15 +273,15 @@ export const LoansPage: React.FC = () => {
         }
       >
         <div className="space-y-4">
-          <p className="text-sm text-ink-600 dark:text-ink-300">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Pengembalian peminjaman <span className="font-mono">#{selected?.id}</span>
           </p>
           <div>
-            <label className="block text-sm font-medium text-ink-700 dark:text-ink-300 mb-1">Kondisi</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kondisi</label>
             <select
               value={returnCondition}
               onChange={(e) => setReturnCondition(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-ink-200 dark:border-ink-600 rounded-md bg-white dark:bg-ink-800 text-ink-900 dark:text-ink-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
             >
               <option value="Baik">Baik</option>
               <option value="Cukup">Cukup</option>

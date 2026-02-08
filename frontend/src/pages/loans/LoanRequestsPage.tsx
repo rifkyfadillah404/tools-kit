@@ -19,6 +19,8 @@ interface PeminjamanRow {
   catatan: string | null;
   approved_by_name: string | null;
   checkout_by_name: string | null;
+  unit_codes?: string[];
+  unit_codes_active?: string[];
 }
 
 interface PeminjamanDetail extends PeminjamanRow {
@@ -27,6 +29,14 @@ interface PeminjamanDetail extends PeminjamanRow {
   kondisi_masuk: string | null;
   return_by_name: string | null;
   denda: string;
+  units?: Array<{
+    id: number;
+    tool_unit_id: number;
+    unit_code: string;
+    unit_status: string;
+    checkout_at?: string | null;
+    return_at?: string | null;
+  }>;
   pengembalian?: {
     id: number;
     tanggal_kembali: string;
@@ -47,7 +57,7 @@ interface Tool {
 }
 
 export const LoanRequestsPage: React.FC = () => {
-  const { user, canProcessPeminjaman, isPeminjam } = useAuthStore();
+  const { canProcessPeminjaman, isPeminjam } = useAuthStore();
   const { addToast } = useUIStore();
 
   const [rows, setRows] = useState<PeminjamanRow[]>([]);
@@ -201,8 +211,14 @@ export const LoanRequestsPage: React.FC = () => {
     if (!selected) return;
     setSaving(true);
     try {
-      await peminjamanApi.checkout(selected.id, checkoutCondition || 'Baik');
-      addToast('Alat berhasil diserahkan', 'success');
+      const { data } = await peminjamanApi.checkout(selected.id, checkoutCondition || 'Baik');
+      const assignedUnits = Array.isArray(data?.unit_codes) ? data.unit_codes : [];
+      addToast(
+        assignedUnits.length > 0
+          ? `Alat berhasil diserahkan. Unit: ${assignedUnits.join(', ')}`
+          : 'Alat berhasil diserahkan',
+        'success'
+      );
       setCheckoutModalOpen(false);
       setDetailModalOpen(false);
       void fetchRows();
@@ -231,12 +247,12 @@ export const LoanRequestsPage: React.FC = () => {
     <div className="animate-[fadeIn_300ms_ease-out]">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-ink-900 dark:text-white">Peminjaman</h1>
-          <p className="text-ink-500 dark:text-ink-400 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Peminjaman</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
             {canProcessPeminjaman() ? 'Kelola pengajuan dan proses peminjaman' : 'Lihat dan buat pengajuan baru'}
           </p>
         </div>
-        {(isPeminjam() || user?.role === 'admin') && (
+        {isPeminjam() && (
           <Button onClick={() => setCreateModalOpen(true)} icon={<Plus size={16} />}>
             Ajukan Peminjaman
           </Button>
@@ -244,11 +260,11 @@ export const LoanRequestsPage: React.FC = () => {
       </div>
 
       {/* Filter */}
-      <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 p-4 mb-6">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-ink-100 dark:border-ink-700 p-4 mb-6">
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-3 py-2 text-sm border border-ink-200 dark:border-ink-600 rounded-md bg-white dark:bg-ink-800 text-ink-900 dark:text-ink-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
+          className="px-3 py-2 text-sm border border-ink-200 dark:border-ink-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
         >
           <option value="">Semua Status</option>
           <option value="pending">Menunggu</option>
@@ -260,13 +276,13 @@ export const LoanRequestsPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="w-8 h-8 border-4 border-ink-200 dark:border-ink-600 border-t-blue-600 rounded-full animate-spin" />
           </div>
         ) : rows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-ink-500 dark:text-ink-400">
+          <div className="flex flex-col items-center justify-center py-16 text-gray-500 dark:text-gray-400">
             <Handshake size={48} className="mb-4 opacity-50" />
             <p>Tidak ada data peminjaman</p>
           </div>
@@ -274,27 +290,36 @@ export const LoanRequestsPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-ink-50 dark:bg-ink-800 border-b border-ink-200 dark:border-ink-700">
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">ID</th>
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Peminjam</th>
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Alat</th>
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Qty</th>
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Tanggal</th>
-                  <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Status</th>
-                  <th className="text-right px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Aksi</th>
+                <tr className="bg-gray-50 dark:bg-gray-800 border-b border-ink-200 dark:border-ink-700">
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">ID</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Peminjam</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Alat</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Qty</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Tanggal</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Status</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink-100 dark:divide-ink-700">
                 {rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-ink-50 dark:hover:bg-ink-800 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-ink-600 dark:text-ink-400">#{row.id}</td>
-                    <td className="px-4 py-3 font-medium text-ink-900 dark:text-white">{row.peminjam_name}</td>
+                  <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">#{row.id}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.peminjam_name}</td>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-ink-900 dark:text-white">{row.tool_name}</p>
-                      <p className="text-xs text-ink-500 dark:text-ink-400 font-mono">{row.asset_tag}</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{row.tool_name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{row.asset_tag}</p>
                     </td>
-                    <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{row.qty}</td>
-                    <td className="px-4 py-3 text-ink-600 dark:text-ink-300">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
+                      <div>
+                        <p>{row.qty}</p>
+                        {row.unit_codes && row.unit_codes.length > 0 && (
+                          <p className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                            {row.unit_codes.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
                       {formatDate(row.tanggal_pinjam)} - {formatDate(row.tanggal_kembali_rencana)}
                     </td>
                     <td className="px-4 py-3">
@@ -304,7 +329,7 @@ export const LoanRequestsPage: React.FC = () => {
                       <div className="flex items-center justify-end">
                         <button
                           onClick={() => void openDetail(row)}
-                          className="p-1.5 text-ink-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                         >
                           <Eye size={16} />
                         </button>
@@ -359,7 +384,7 @@ export const LoanRequestsPage: React.FC = () => {
               onChange={(e) => setFormData((prev) => ({ ...prev, qty: e.target.value }))}
               required
             />
-            <div className="pt-7 text-xs text-ink-500 dark:text-ink-400">
+            <div className="pt-7 text-xs text-gray-500 dark:text-gray-400">
               Maks: <span className="font-mono">{maxQty}</span>
             </div>
           </div>
@@ -428,65 +453,73 @@ export const LoanRequestsPage: React.FC = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Peminjam</p>
-                <p className="font-medium text-ink-900 dark:text-white">{selected.peminjam_name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Peminjam</p>
+                <p className="font-medium text-gray-900 dark:text-white">{selected.peminjam_name}</p>
               </div>
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Status</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Status</p>
                 <span className={`status-badge status-${selected.status}`}>{statusLabel(selected.status)}</span>
               </div>
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Tanggal Pinjam</p>
-                <p className="font-medium text-ink-900 dark:text-white">{formatDate(selected.tanggal_pinjam)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Tanggal Pinjam</p>
+                <p className="font-medium text-gray-900 dark:text-white">{formatDate(selected.tanggal_pinjam)}</p>
               </div>
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Kembali (Rencana)</p>
-                <p className="font-medium text-ink-900 dark:text-white">{formatDate(selected.tanggal_kembali_rencana)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Kembali (Rencana)</p>
+                <p className="font-medium text-gray-900 dark:text-white">{formatDate(selected.tanggal_kembali_rencana)}</p>
               </div>
             </div>
 
-            <div className="border border-ink-200 dark:border-ink-600 rounded-md p-3 bg-ink-50 dark:bg-ink-800">
-              <p className="text-xs text-ink-500 dark:text-ink-400 mb-1">Alat</p>
-              <p className="font-medium text-ink-900 dark:text-white">{selected.tool_name}</p>
-              <p className="text-xs text-ink-500 dark:text-ink-400 font-mono">{selected.asset_tag}</p>
-              <p className="text-sm text-ink-600 dark:text-ink-300 mt-2">Qty: {selected.qty}</p>
+            <div className="border border-ink-200 dark:border-ink-600 rounded-md p-3 bg-gray-50 dark:bg-gray-800">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Alat</p>
+              <p className="font-medium text-gray-900 dark:text-white">{selected.tool_name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{selected.asset_tag}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Qty: {selected.qty}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Unit ter-assign</p>
+              {selected.unit_codes && selected.unit_codes.length > 0 ? (
+                <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+                  {selected.unit_codes.join(', ')}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Belum ada unit (menunggu checkout).</p>
+              )}
             </div>
 
             {selected.catatan ? (
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Catatan</p>
-                <p className="text-sm text-ink-700 dark:text-ink-300 whitespace-pre-wrap">{selected.catatan}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Catatan</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selected.catatan}</p>
               </div>
             ) : null}
 
             {selected.kondisi_keluar ? (
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Kondisi Keluar</p>
-                <p className="text-sm text-ink-700 dark:text-ink-300">{selected.kondisi_keluar}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Kondisi Keluar</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{selected.kondisi_keluar}</p>
               </div>
             ) : null}
 
             {selected.tanggal_kembali_aktual ? (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-ink-500 dark:text-ink-400">Tanggal Kembali</p>
-                  <p className="font-medium text-ink-900 dark:text-white">{formatDate(selected.tanggal_kembali_aktual)}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Tanggal Kembali</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{formatDate(selected.tanggal_kembali_aktual)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-ink-500 dark:text-ink-400">Denda</p>
-                  <p className="font-medium text-ink-900 dark:text-white">Rp {Number(selected.denda || 0).toLocaleString('id-ID')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Denda</p>
+                  <p className="font-medium text-gray-900 dark:text-white">Rp {Number(selected.denda || 0).toLocaleString('id-ID')}</p>
                 </div>
               </div>
             ) : null}
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Disetujui</p>
-                <p className="text-ink-700 dark:text-ink-300">{selected.approved_by_name || '-'}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Disetujui</p>
+                <p className="text-gray-700 dark:text-gray-300">{selected.approved_by_name || '-'}</p>
               </div>
               <div>
-                <p className="text-xs text-ink-500 dark:text-ink-400">Checkout</p>
-                <p className="text-ink-700 dark:text-ink-300">{selected.checkout_by_name || '-'}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Checkout</p>
+                <p className="text-gray-700 dark:text-gray-300">{selected.checkout_by_name || '-'}</p>
               </div>
             </div>
           </div>
@@ -537,13 +570,13 @@ export const LoanRequestsPage: React.FC = () => {
         }
       >
         <div className="space-y-3">
-          <p className="text-sm text-ink-600 dark:text-ink-300">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Serahkan alat untuk peminjaman <span className="font-mono">#{selected?.id}</span>.
           </p>
           <select
             value={checkoutCondition}
             onChange={(e) => setCheckoutCondition(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-ink-200 dark:border-ink-600 rounded-md bg-white dark:bg-ink-800 text-ink-900 dark:text-ink-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
+            className="w-full px-3 py-2 text-sm border border-ink-200 dark:border-ink-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
           >
             <option value="Baik">Baik</option>
             <option value="Cukup">Cukup</option>

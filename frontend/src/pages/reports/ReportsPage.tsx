@@ -84,11 +84,13 @@ export const ReportsPage: React.FC = () => {
     const rowsHtml = printRows
       .map((r) => {
         const denda = Number(r.denda_pengembalian || r.denda || 0);
+        const unitCodes = Array.isArray(r.unit_codes) ? r.unit_codes.join(', ') : '-';
         return `
           <tr>
             <td>${r.id}</td>
             <td>${r.peminjam_name || ''}</td>
             <td>${r.tool_name || ''} <span class="muted">(${r.asset_tag || ''})</span></td>
+            <td>${unitCodes}</td>
             <td style="text-align:right;">${r.qty ?? ''}</td>
             <td>${r.tanggal_pinjam ? formatDate(r.tanggal_pinjam) : ''}</td>
             <td>${r.tanggal_kembali_rencana ? formatDate(r.tanggal_kembali_rencana) : ''}</td>
@@ -127,6 +129,7 @@ export const ReportsPage: React.FC = () => {
                 <th>ID</th>
                 <th>Peminjam</th>
                 <th>Alat</th>
+                <th>Unit Code</th>
                 <th style="text-align:right;">Qty</th>
                 <th>Tgl Pinjam</th>
                 <th>Tgl Kembali</th>
@@ -150,18 +153,18 @@ export const ReportsPage: React.FC = () => {
   return (
     <div className="animate-[fadeIn_300ms_ease-out]">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink-900 dark:text-white">Laporan</h1>
-        <p className="text-ink-500 dark:text-ink-400 mt-1">Monitoring peminjaman, denda, dan log aktivitas</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Laporan</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Monitoring peminjaman, denda, dan log aktivitas</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-ink-100 dark:bg-ink-800 p-1 rounded-lg mb-6 w-fit">
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-6 w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              activeTab === tab.id ? 'bg-white dark:bg-ink-700 text-ink-900 dark:text-white shadow-sm' : 'text-ink-600 dark:text-ink-400 hover:text-ink-900 dark:hover:text-ink-200'
+              activeTab === tab.id ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
             <tab.icon size={16} />
@@ -178,7 +181,7 @@ export const ReportsPage: React.FC = () => {
         <>
           {activeTab === 'overdue' && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
+              <div className="bg-white dark:bg-gray-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
                 <div className="px-5 py-4 border-b border-ink-100 dark:border-ink-700 bg-red-50 dark:bg-red-900/20">
                   <h2 className="font-semibold text-red-800 dark:text-red-400 flex items-center gap-2">
                     <AlertTriangle size={18} />
@@ -186,31 +189,31 @@ export const ReportsPage: React.FC = () => {
                   </h2>
                 </div>
                 {overdueRows.length === 0 ? (
-                  <div className="p-8 text-center text-ink-500 dark:text-ink-400">Tidak ada peminjaman terlambat</div>
+                  <div className="p-8 text-center text-gray-500 dark:text-gray-400">Tidak ada peminjaman terlambat</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-ink-50 dark:bg-ink-800 border-b border-ink-200 dark:border-ink-700">
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Peminjam</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Email</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Alat</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Jatuh Tempo</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Terlambat</th>
-                          <th className="text-right px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Estimasi Denda</th>
+                        <tr className="bg-gray-50 dark:bg-gray-800 border-b border-ink-200 dark:border-ink-700">
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Peminjam</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Email</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Alat</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Jatuh Tempo</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Terlambat</th>
+                          <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Estimasi Denda</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ink-100 dark:divide-ink-700">
                         {overdueRows.map((row) => (
-                          <tr key={row.id} className="hover:bg-ink-50 dark:hover:bg-ink-800">
-                            <td className="px-4 py-3 font-medium text-ink-900 dark:text-white">{row.peminjam_name}</td>
-                            <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{row.peminjam_email}</td>
-                            <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{row.tool_name}</td>
-                            <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{formatDate(row.tanggal_kembali_rencana)}</td>
+                          <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.peminjam_name}</td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{row.peminjam_email}</td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{row.tool_name}</td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{formatDate(row.tanggal_kembali_rencana)}</td>
                             <td className="px-4 py-3">
                               <span className="text-red-600 dark:text-red-400 font-semibold">{row.days_overdue} hari</span>
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold text-ink-900 dark:text-white">
+                            <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
                               Rp {Number(row.estimated_denda || 0).toLocaleString('id-ID')}
                             </td>
                           </tr>
@@ -221,7 +224,7 @@ export const ReportsPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
+              <div className="bg-white dark:bg-gray-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
                 <div className="px-5 py-4 border-b border-ink-100 dark:border-ink-700 bg-amber-50 dark:bg-amber-900/20">
                   <h2 className="font-semibold text-amber-800 dark:text-amber-400 flex items-center gap-2">
                     <Clock size={18} />
@@ -229,26 +232,26 @@ export const ReportsPage: React.FC = () => {
                   </h2>
                 </div>
                 {dueSoonRows.length === 0 ? (
-                  <div className="p-8 text-center text-ink-500 dark:text-ink-400">Tidak ada peminjaman jatuh tempo dalam 7 hari</div>
+                  <div className="p-8 text-center text-gray-500 dark:text-gray-400">Tidak ada peminjaman jatuh tempo dalam 7 hari</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-ink-50 dark:bg-ink-800 border-b border-ink-200 dark:border-ink-700">
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Peminjam</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Email</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Alat</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Jatuh Tempo</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Sisa</th>
+                        <tr className="bg-gray-50 dark:bg-gray-800 border-b border-ink-200 dark:border-ink-700">
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Peminjam</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Email</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Alat</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Jatuh Tempo</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Sisa</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ink-100 dark:divide-ink-700">
                         {dueSoonRows.map((row) => (
-                          <tr key={row.id} className="hover:bg-ink-50 dark:hover:bg-ink-800">
-                            <td className="px-4 py-3 font-medium text-ink-900 dark:text-white">{row.peminjam_name}</td>
-                            <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{row.peminjam_email}</td>
-                            <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{row.tool_name}</td>
-                            <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{formatDate(row.tanggal_kembali_rencana)}</td>
+                          <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.peminjam_name}</td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{row.peminjam_email}</td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{row.tool_name}</td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{formatDate(row.tanggal_kembali_rencana)}</td>
                             <td className="px-4 py-3">
                               <span className="text-amber-600 dark:text-amber-400 font-semibold">{row.days_until_due} hari</span>
                             </td>
@@ -263,31 +266,31 @@ export const ReportsPage: React.FC = () => {
           )}
 
           {activeTab === 'utilization' && (
-            <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
               <div className="px-5 py-4 border-b border-ink-100 dark:border-ink-700">
-                <h2 className="font-semibold text-ink-900 dark:text-white">Utilisasi Alat</h2>
+                <h2 className="font-semibold text-gray-900 dark:text-white">Utilisasi Alat</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-ink-50 dark:bg-ink-800 border-b border-ink-200 dark:border-ink-700">
-                      <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Alat</th>
-                      <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Kategori</th>
-                      <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Kode</th>
-                      <th className="text-right px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Jumlah Pinjam</th>
-                      <th className="text-right px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Total Hari</th>
+                    <tr className="bg-gray-50 dark:bg-gray-800 border-b border-ink-200 dark:border-ink-700">
+                      <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Alat</th>
+                      <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Kategori</th>
+                      <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Kode</th>
+                      <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Jumlah Pinjam</th>
+                      <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Total Hari</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ink-100 dark:divide-ink-700">
                     {utilization.map((tool) => (
-                      <tr key={tool.id} className="hover:bg-ink-50 dark:hover:bg-ink-800">
-                        <td className="px-4 py-3 font-medium text-ink-900 dark:text-white">{tool.name}</td>
-                        <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{tool.category_name || '-'}</td>
+                      <tr key={tool.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{tool.name}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{tool.category_name || '-'}</td>
                         <td className="px-4 py-3">
-                          <span className="font-mono text-xs bg-ink-100 dark:bg-ink-800 text-ink-700 dark:text-ink-300 px-2 py-1 rounded">{tool.asset_tag || '-'}</span>
+                          <span className="font-mono text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">{tool.asset_tag || '-'}</span>
                         </td>
-                        <td className="px-4 py-3 text-right font-semibold text-ink-900 dark:text-white">{tool.borrow_count}</td>
-                        <td className="px-4 py-3 text-right text-ink-600 dark:text-ink-300">{tool.total_days_borrowed}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">{tool.borrow_count}</td>
+                        <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">{tool.total_days_borrowed}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -297,31 +300,31 @@ export const ReportsPage: React.FC = () => {
           )}
 
           {activeTab === 'audit' && (
-            <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
               <div className="px-5 py-4 border-b border-ink-100 dark:border-ink-700">
-                <h2 className="font-semibold text-ink-900 dark:text-white">Log Aktivitas</h2>
+                <h2 className="font-semibold text-gray-900 dark:text-white">Log Aktivitas</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-ink-50 dark:bg-ink-800 border-b border-ink-200 dark:border-ink-700">
-                      <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Waktu</th>
-                      <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">User</th>
-                      <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Aksi</th>
-                      <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Entity</th>
-                      <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">ID</th>
+                    <tr className="bg-gray-50 dark:bg-gray-800 border-b border-ink-200 dark:border-ink-700">
+                      <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Waktu</th>
+                      <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">User</th>
+                      <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Aksi</th>
+                      <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Entity</th>
+                      <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">ID</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ink-100 dark:divide-ink-700">
                     {auditLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-ink-50 dark:hover:bg-ink-800">
-                        <td className="px-4 py-3 text-xs text-ink-500 dark:text-ink-400 font-mono">{formatDateTime(log.created_at)}</td>
-                        <td className="px-4 py-3 font-medium text-ink-900 dark:text-white">{log.user_name || 'System'}</td>
+                      <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 font-mono">{formatDateTime(log.created_at)}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{log.user_name || 'System'}</td>
                         <td className="px-4 py-3">
-                          <span className="px-2 py-0.5 bg-ink-100 dark:bg-ink-800 text-ink-700 dark:text-ink-300 text-xs font-medium rounded">{log.action}</span>
+                          <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-medium rounded">{log.action}</span>
                         </td>
-                        <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{log.entity_type}</td>
-                        <td className="px-4 py-3 font-mono text-xs text-ink-500 dark:text-ink-400">#{log.entity_id || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{log.entity_type}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400">#{log.entity_id || '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -332,7 +335,7 @@ export const ReportsPage: React.FC = () => {
 
           {activeTab === 'print' && (
             <div className="space-y-4">
-              <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 p-5">
+              <div className="bg-white dark:bg-gray-900 rounded-lg border border-ink-100 dark:border-ink-700 p-5">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                   <Input
                     label="Tanggal Mulai"
@@ -347,11 +350,11 @@ export const ReportsPage: React.FC = () => {
                     onChange={(e) => setPrintEnd(e.target.value)}
                   />
                   <div>
-                    <label className="block text-sm font-medium text-ink-700 dark:text-ink-300 mb-1">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
                     <select
                       value={printStatus}
                       onChange={(e) => setPrintStatus(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-ink-200 dark:border-ink-600 rounded-md bg-white dark:bg-ink-800 text-ink-900 dark:text-ink-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
+                      className="w-full px-3 py-2 text-sm border border-ink-200 dark:border-ink-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
                     >
                       <option value="">Semua</option>
                       <option value="pending">pending</option>
@@ -377,41 +380,45 @@ export const ReportsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-ink-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
+              <div className="bg-white dark:bg-gray-900 rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
                 <div className="px-5 py-4 border-b border-ink-100 dark:border-ink-700 flex items-center justify-between">
-                  <h2 className="font-semibold text-ink-900 dark:text-white">{printTitle}</h2>
-                  <span className="text-xs text-ink-500 dark:text-ink-400">{printRows.length} baris</span>
+                  <h2 className="font-semibold text-gray-900 dark:text-white">{printTitle}</h2>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{printRows.length} baris</span>
                 </div>
                 {printRows.length === 0 ? (
-                  <div className="p-8 text-center text-ink-500 dark:text-ink-400">Tidak ada data untuk dicetak</div>
+                  <div className="p-8 text-center text-gray-500 dark:text-gray-400">Tidak ada data untuk dicetak</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-ink-50 dark:bg-ink-800 border-b border-ink-200 dark:border-ink-700">
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">ID</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Peminjam</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Alat</th>
-                          <th className="text-right px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Qty</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Tgl Pinjam</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Tgl Kembali</th>
-                          <th className="text-left px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Status</th>
-                          <th className="text-right px-4 py-3 font-semibold text-ink-600 dark:text-ink-300 uppercase text-xs">Denda</th>
+                        <tr className="bg-gray-50 dark:bg-gray-800 border-b border-ink-200 dark:border-ink-700">
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">ID</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Peminjam</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Alat</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Unit Code</th>
+                          <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Qty</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Tgl Pinjam</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Tgl Kembali</th>
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Status</th>
+                          <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 uppercase text-xs">Denda</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ink-100 dark:divide-ink-700">
                         {printRows.map((r) => (
-                          <tr key={r.id} className="hover:bg-ink-50 dark:hover:bg-ink-800">
-                            <td className="px-4 py-3 font-mono text-xs text-ink-600 dark:text-ink-400">#{r.id}</td>
-                            <td className="px-4 py-3 font-medium text-ink-900 dark:text-white">{r.peminjam_name}</td>
-                            <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{r.tool_name}</td>
-                            <td className="px-4 py-3 text-right font-semibold text-ink-900 dark:text-white">{r.qty}</td>
-                            <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{formatDate(r.tanggal_pinjam)}</td>
-                            <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{formatDate(r.tanggal_kembali_rencana)}</td>
+                          <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">#{r.id}</td>
+                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{r.peminjam_name}</td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{r.tool_name}</td>
+                            <td className="px-4 py-3 text-xs font-mono text-gray-600 dark:text-gray-300">
+                              {Array.isArray(r.unit_codes) && r.unit_codes.length > 0 ? r.unit_codes.join(', ') : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">{r.qty}</td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{formatDate(r.tanggal_pinjam)}</td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{formatDate(r.tanggal_kembali_rencana)}</td>
                             <td className="px-4 py-3">
                               <span className={`status-badge status-${r.status}`}>{r.status}</span>
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold text-ink-900 dark:text-white">
+                            <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
                               Rp {Number(r.denda_pengembalian || r.denda || 0).toLocaleString('id-ID')}
                             </td>
                           </tr>

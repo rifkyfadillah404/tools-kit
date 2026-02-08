@@ -229,6 +229,34 @@ const getPeminjamanReport = async (req, res) => {
     query += ' ORDER BY p.created_at DESC';
 
     const [rows] = await pool.query(query, params);
+
+    if (rows.length > 0) {
+      const ids = rows.map((r) => r.id);
+      const placeholders = ids.map(() => '?').join(', ');
+      const [units] = await pool.query(
+        `
+          SELECT
+            pu.peminjaman_id,
+            tu.unit_code
+          FROM peminjaman_units pu
+          JOIN tool_units tu ON tu.id = pu.tool_unit_id
+          WHERE pu.peminjaman_id IN (${placeholders})
+          ORDER BY tu.unit_code ASC
+        `,
+        ids
+      );
+
+      const map = new Map();
+      units.forEach((u) => {
+        if (!map.has(u.peminjaman_id)) map.set(u.peminjaman_id, []);
+        map.get(u.peminjaman_id).push(u.unit_code);
+      });
+
+      rows.forEach((row) => {
+        row.unit_codes = map.get(row.id) || [];
+      });
+    }
+
     res.json(rows);
   } catch (error) {
     console.error('Get report peminjaman error:', error);

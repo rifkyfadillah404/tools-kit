@@ -109,7 +109,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ data, user, greeting })
   return (
     <div className="max-w-7xl mx-auto space-y-8">
       {/* Header Section */}
-      <header className="relative overflow-hidden bg-white dark:bg-[#151921] rounded-2xl border border-ink-100 dark:border-ink-800 p-8 animate-[reveal-up_0.5s_ease-out_both]">
+      <header className="relative overflow-hidden bg-white dark:bg-ink-900 rounded-2xl border border-ink-100 dark:border-ink-800 p-8 animate-[reveal-up_0.5s_ease-out_both]">
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-brand-50 dark:from-brand-500/10 to-transparent rounded-full blur-3xl opacity-60 -mr-48 -mt-48" />
         <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div>
@@ -204,7 +204,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ data, user, greeting })
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Activity Feed - Takes 2 columns */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#151921] rounded-2xl border border-ink-100 dark:border-ink-800 overflow-hidden animate-[reveal-up_0.5s_ease-out_0.2s_both]">
+        <div className="lg:col-span-2 bg-white dark:bg-ink-900 rounded-2xl border border-ink-100 dark:border-ink-800 overflow-hidden animate-[reveal-up_0.5s_ease-out_0.2s_both]">
           <div className="px-6 py-5 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-ink-900 dark:text-white">Aktivitas Terbaru</h2>
@@ -302,7 +302,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ data, user, greeting })
           )}
 
           {/* Server Status */}
-          <div className="bg-white dark:bg-[#151921] border border-ink-100 dark:border-ink-800 rounded-2xl p-5 animate-[reveal-up_0.5s_ease-out_0.5s_both]">
+          <div className="bg-white dark:bg-ink-900 border border-ink-100 dark:border-ink-800 rounded-2xl p-5 animate-[reveal-up_0.5s_ease-out_0.5s_both]">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-ink-500 dark:text-ink-400">Status Sistem</span>
               <div className="flex items-center gap-2">
@@ -331,7 +331,7 @@ const PeminjamDashboard: React.FC<PeminjamDashboardProps> = ({ user, greeting, n
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       {/* Welcome Hero */}
-      <div className="relative overflow-hidden bg-white dark:bg-[#151921] rounded-3xl border border-ink-100 dark:border-ink-800 p-8 lg:p-12 animate-[reveal-up_0.5s_ease-out_both]">
+      <div className="relative overflow-hidden bg-white dark:bg-ink-900 rounded-3xl border border-ink-100 dark:border-ink-800 p-8 lg:p-12 animate-[reveal-up_0.5s_ease-out_both]">
         <div className="absolute inset-0 bg-grid opacity-50" />
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-brand-100 dark:from-brand-500/20 via-brand-50 dark:via-brand-500/5 to-transparent rounded-full blur-3xl opacity-40 -mr-64 -mt-64" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-sage-100 dark:from-sage-500/20 to-transparent rounded-full blur-3xl opacity-40 -ml-32 -mb-32" />
@@ -403,7 +403,7 @@ const PeminjamDashboard: React.FC<PeminjamDashboardProps> = ({ user, greeting, n
 
       {/* Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
-        <div className="bg-white dark:bg-[#151921] rounded-2xl border border-ink-100 dark:border-ink-800 p-6 animate-[reveal-up_0.5s_ease-out_0.3s_both]">
+        <div className="bg-white dark:bg-ink-900 rounded-2xl border border-ink-100 dark:border-ink-800 p-6 animate-[reveal-up_0.5s_ease-out_0.3s_both]">
           <div className="flex items-start gap-4">
             <div className="p-3 bg-ocean-50 dark:bg-ocean-900/30 rounded-xl">
               <Users size={22} className="text-ocean-500 dark:text-ocean-400" />

@@ -48,6 +48,26 @@ async function seed() {
     `);
     console.log('Tools seeded.');
 
+    // Seed unit per tool untuk model unit-level
+    const [tools] = await pool.query('SELECT id, asset_tag, stock FROM tools ORDER BY id ASC');
+
+    for (const tool of tools) {
+      const stock = Number(tool.stock) || 0;
+      for (let idx = 1; idx <= stock; idx += 1) {
+        const unitCode = `${tool.asset_tag || `TOOL-${tool.id}`}-${String(idx).padStart(3, '0')}`;
+        await pool.query(
+          `
+            INSERT IGNORE INTO tool_units (tool_id, unit_code, status)
+            VALUES (?, ?, 'available')
+          `,
+          [tool.id, unitCode]
+        );
+      }
+
+      await pool.query('CALL sp_sync_tool_stock(?)', [tool.id]);
+    }
+    console.log('Tool units seeded.');
+
     console.log('Seed completed successfully.');
     process.exit(0);
   } catch (error) {

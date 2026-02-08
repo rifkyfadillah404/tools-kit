@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { useAuthStore } from '../../store/authStore';
@@ -7,12 +7,7 @@ import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
 export const MainLayout: React.FC = () => {
   const { token } = useAuthStore();
-  const { sidebarOpen, setSidebarOpen, toasts, removeToast, initializeTheme } = useUIStore();
-
-  // Initialize theme on mount
-  useEffect(() => {
-    initializeTheme();
-  }, [initializeTheme]);
+  const { sidebarOpen, setSidebarOpen, toasts, removeToast } = useUIStore();
 
   if (!token) {
     return <Navigate to="/login" replace />;
@@ -41,7 +36,7 @@ export const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-ink-50 dark:bg-[#0A0C10] flex transition-colors duration-300">
+    <div className="min-h-screen bg-[#FAFBFC] dark:bg-[#030712] flex transition-colors duration-300">
       <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
       <main className="flex-1 min-w-0 relative">

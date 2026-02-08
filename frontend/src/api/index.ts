@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_URL = 'http://localhost:3000/api';
+const BASE_URL = 'http://localhost:3000';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -64,6 +65,8 @@ export const toolApi = {
     location?: string;
     stock?: number;
     available_stock?: number;
+    photo_url?: string;
+    unit_codes?: string[];
   }) => api.post('/tools', data),
   update: (id: number, data: {
     category_id: number;
@@ -71,9 +74,24 @@ export const toolApi = {
     asset_tag?: string;
     description?: string;
     location?: string;
-    stock?: number;
-    available_stock?: number;
+    photo_url?: string;
   }) => api.put(`/tools/${id}`, data),
+  uploadPhoto: (file: File) => {
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    return api.post('/tools/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  getUnits: (toolId: number) => api.get(`/tools/${toolId}/units`),
+  addUnits: (toolId: number, unit_codes: string[]) => api.post(`/tools/${toolId}/units`, { unit_codes }),
+  updateUnitStatus: (
+    toolId: number,
+    unitId: number,
+    data: { status?: 'available' | 'dipinjam' | 'maintenance' | 'hilang'; condition_note?: string }
+  ) => api.patch(`/tools/${toolId}/units/${unitId}`, data),
+  deleteUnit: (toolId: number, unitId: number) => api.delete(`/tools/${toolId}/units/${unitId}`),
   updateStatus: (id: number, status: 'available' | 'not_available') =>
     api.patch(`/tools/${id}/status`, { status }),
   delete: (id: number) => api.delete(`/tools/${id}`),
@@ -110,6 +128,13 @@ export const reportApi = {
     api.get('/reports/audit-logs', { params }),
   getPeminjamanReport: (params?: { start_date?: string; end_date?: string; status?: string }) =>
     api.get('/reports/peminjaman', { params }),
+};
+
+export const getPublicFileUrl = (url?: string | null) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/')) return `${BASE_URL}${url}`;
+  return `${BASE_URL}/${url}`;
 };
 
 export default api;
